@@ -15,7 +15,7 @@ android {
         versionName = "1.0"
 
         // Serveringiz manzili (oxirida "/" bo'lmasin) va ixtiyoriy umumiy kalit
-        buildConfigField("String", "SERVER_URL", "\"https://YOUR-SERVER.onrender.com\"")
+        buildConfigField("String", "SERVER_URL", "\"https://jarvis-server-qnst.onrender.com\"")
         buildConfigField("String", "APP_KEY", "\"\"")
     }
 
