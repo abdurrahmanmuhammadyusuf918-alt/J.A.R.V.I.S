@@ -16,8 +16,6 @@ data class Msg(val text: String, val fromUser: Boolean, val isError: Boolean = f
 
 class JarvisViewModel(app: Application) : AndroidViewModel(app) {
 
-    private val api = JarvisApi()
-
     private val _messages = MutableStateFlow(
         listOf(Msg("Salom! Men Jarvis. Yozing yoki mikrofonni bosib gapiring. Masalan: \"Telegramni och\".", false))
     )
@@ -44,15 +42,13 @@ class JarvisViewModel(app: Application) : AndroidViewModel(app) {
         add(Msg(text, true))
 
         // 1) Avval ilova ochish buyrug'i ekanini tekshiramiz (serverga bormaydi)
-        val appName = AppLauncher.parseOpenCommand(text)
-        if (appName != null) {
-            val opened = AppLauncher.open(getApplication(), appName)
-            if (opened != null) reply("$opened ochilmoqda", fromVoice)
-            else reply("\"$appName\" nomli ilova topilmadi.", fromVoice)
+        val fast = CommandRouter.fastPath(getApplication(), text)
+        if (fast != null) {
+            reply(fast.message, fromVoice)
             return
         }
 
-        // 2) Aks holda serverdagi AI ga yuboramiz
+        // 2) Aks holda serverdagi AI buyruqni tushunadi va bajaradi (qo'ng'iroq, SMS, agent, chat ...)
         val history = _messages.value
             .filter { !it.isError }
             .map { (if (it.fromUser) "user" else "assistant") to it.text }
@@ -60,10 +56,15 @@ class JarvisViewModel(app: Application) : AndroidViewModel(app) {
 
         _loading.value = true
         viewModelScope.launch {
-            val result = withContext(Dispatchers.IO) { api.chat(history) }
+            val result = withContext(Dispatchers.IO) {
+                JarvisApi().command(text, history).map { CommandRouter.execute(getApplication(), it) }
+            }
             _loading.value = false
             result
-                .onSuccess { reply(it, fromVoice) }
+                .onSuccess { out ->
+                    reply(out.message, fromVoice || (out.speak && out.agentGoal != null))
+                    out.agentGoal?.let { AgentRunner.run(getApplication(), it) }
+                }
                 .onFailure { showError(it.message ?: "Noma'lum xato") }
         }
     }

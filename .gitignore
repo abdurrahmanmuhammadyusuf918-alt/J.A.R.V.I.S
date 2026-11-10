@@ -1,0 +1,4 @@
+app/app/src/main/assets/model-en-us/
+build/
+.gradle/
+node_modules/

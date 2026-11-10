@@ -36,6 +36,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -68,7 +69,7 @@ import uz.jarvis.app.Msg
 import uz.jarvis.app.VoiceController
 
 @Composable
-fun ChatScreen(vm: JarvisViewModel = viewModel(), autoListenTrigger: Int = 0) {
+fun ChatScreen(vm: JarvisViewModel = viewModel(), autoListenTrigger: Int = 0, onOpenSetup: () -> Unit = {}) {
     val ctx = LocalContext.current
     val messages by vm.messages.collectAsStateWithLifecycle()
     val loading by vm.loading.collectAsStateWithLifecycle()
@@ -119,7 +120,7 @@ fun ChatScreen(vm: JarvisViewModel = viewModel(), autoListenTrigger: Int = 0) {
 
     Box(Modifier.fillMaxSize().background(JarvisColors.Background)) {
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
-            Header(listening)
+            Header(listening, onOpenSetup)
 
             LazyColumn(
                 state = listState,
@@ -143,7 +144,7 @@ fun ChatScreen(vm: JarvisViewModel = viewModel(), autoListenTrigger: Int = 0) {
 }
 
 @Composable
-private fun Header(listening: Boolean) {
+private fun Header(listening: Boolean, onSetup: () -> Unit) {
     val pulse = rememberInfiniteTransition(label = "orb")
     val s by pulse.animateFloat(
         initialValue = 1f, targetValue = 1.25f,
@@ -169,6 +170,10 @@ private fun Header(listening: Boolean) {
                 color = if (listening) JarvisColors.Pink else JarvisColors.TextDim,
                 fontSize = 12.sp,
             )
+        }
+        Spacer(Modifier.weight(1f))
+        Box(Modifier.size(40.dp).clip(CircleShape).clickable(onClick = onSetup), contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.Settings, "Sozlamalar", tint = JarvisColors.TextDim)
         }
     }
 }

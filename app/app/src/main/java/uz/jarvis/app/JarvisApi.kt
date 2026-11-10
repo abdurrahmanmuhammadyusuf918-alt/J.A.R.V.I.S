@@ -15,28 +15,50 @@ class JarvisApi {
         .readTimeout(60, TimeUnit.SECONDS)
         .build()
 
-    /** history: (role, content) juftliklari; role = "user" yoki "assistant". Bloklovchi — IO oqimida chaqiring. */
-    fun chat(history: List<Pair<String, String>>): Result<String> = runCatching {
-        val arr = JSONArray()
-        history.takeLast(20).forEach { (role, content) ->
-            arr.put(JSONObject().put("role", role).put("content", content))
-        }
-        val body = JSONObject().put("messages", arr).toString()
-            .toRequestBody("application/json; charset=utf-8".toMediaType())
-
+    private fun post(path: String, body: JSONObject): JSONObject {
         val req = Request.Builder()
-            .url(BuildConfig.SERVER_URL + "/chat")
-            .post(body)
+            .url(BuildConfig.SERVER_URL + path)
+            .post(body.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
             .apply { if (BuildConfig.APP_KEY.isNotEmpty()) header("x-app-key", BuildConfig.APP_KEY) }
             .build()
-
         client.newCall(req).execute().use { resp ->
             val text = resp.body?.string().orEmpty()
             val json = runCatching { JSONObject(text) }.getOrNull()
             if (!resp.isSuccessful) {
                 error(json?.optString("error")?.ifEmpty { null } ?: "Server xatosi (${resp.code})")
             }
-            json?.optString("reply")?.ifEmpty { null } ?: error("Bo'sh javob")
+            return json ?: error("Bo'sh javob")
         }
+    }
+
+    private fun messages(history: List<Pair<String, String>>): JSONArray {
+        val arr = JSONArray()
+        history.takeLast(20).forEach { (role, content) ->
+            arr.put(JSONObject().put("role", role).put("content", content))
+        }
+        return arr
+    }
+
+    /** history: (role, content) juftliklari; role = "user" yoki "assistant". Bloklovchi — IO oqimida chaqiring. */
+    fun chat(history: List<Pair<String, String>>): Result<String> = runCatching {
+        post("/chat", JSONObject().put("messages", messages(history)))
+            .optString("reply").ifEmpty { null } ?: error("Bo'sh javob")
+    }
+
+    /** Ovozli buyruqni amalga aylantiradi (call, sms, open_app, agent, chat ...). */
+    fun command(text: String, history: List<Pair<String, String>>): Result<JSONObject> = runCatching {
+        post("/command", JSONObject().put("text", text).put("history", messages(history)))
+    }
+
+    /** Agent uchun keyingi qadamni so'raydi. */
+    fun agent(goal: String, screen: String, steps: List<String>, pkg: String): Result<JSONObject> = runCatching {
+        post(
+            "/agent",
+            JSONObject()
+                .put("goal", goal)
+                .put("screen", screen)
+                .put("history", JSONArray(steps))
+                .put("app", pkg)
+        )
     }
 }
