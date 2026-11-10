@@ -95,7 +95,7 @@ object OverlayController {
             val d = c.resources.displayMetrics.density
             val txt = TextView(c).apply { setTextColor(Color.WHITE); textSize = 14f }
             val stop = TextView(c).apply {
-                setTextColor(Color.parseColor("#FF4FA3")); textSize = 14f; text = "  ✕ To'xtat"
+                setTextColor(Color.parseColor("#FF4FA3")); textSize = 14f; setText("  ✕ To'xtat")
             }
             val row = LinearLayout(c).apply {
                 gravity = Gravity.CENTER_VERTICAL
