@@ -68,7 +68,7 @@ import uz.jarvis.app.Msg
 import uz.jarvis.app.VoiceController
 
 @Composable
-fun ChatScreen(vm: JarvisViewModel = viewModel()) {
+fun ChatScreen(vm: JarvisViewModel = viewModel(), autoListenTrigger: Int = 0) {
     val ctx = LocalContext.current
     val messages by vm.messages.collectAsStateWithLifecycle()
     val loading by vm.loading.collectAsStateWithLifecycle()
@@ -98,6 +98,11 @@ fun ChatScreen(vm: JarvisViewModel = viewModel()) {
                 PackageManager.PERMISSION_GRANTED -> voice.startListening()
             else -> permission.launch(Manifest.permission.RECORD_AUDIO)
         }
+    }
+
+    // Yon tugma orqali chaqirilganda darhol tinglaydi
+    LaunchedEffect(autoListenTrigger) {
+        if (autoListenTrigger > 0 && !listening) onMicClick()
     }
 
     fun submit() {
