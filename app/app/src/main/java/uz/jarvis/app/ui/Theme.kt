@@ -16,6 +16,10 @@ object JarvisColors {
     val TextMain = Color(0xFFEAF0FF)
     val TextDim = Color(0xFF8E98B8)
     val Error = Color(0xFFFF6B8A)
+    val Drawer = Color(0xFF0C0E16)
+    val Card = Color(0xFF141726)
+    val Selected = Color(0xFF232739)
+    val Line = Color(0xFF1E2234)
 
     val Background = Brush.verticalGradient(listOf(BgTop, Bg, Color(0xFF12071A)))
     val Accent = Brush.linearGradient(listOf(Blue, Pink))
