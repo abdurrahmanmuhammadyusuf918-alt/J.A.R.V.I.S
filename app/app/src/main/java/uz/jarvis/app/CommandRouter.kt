@@ -16,8 +16,43 @@ object CommandRouter {
     private const val NEED_ACCESSIBILITY =
         "Buning uchun Jarvis sozlamasida \"Maxsus imkoniyatlar\"ni yoqing."
 
-    /** Internetsiz, tezkor yo'l: "Telegramni och". Buyruq bo'lmasa null. */
+    private val callWords = setOf(
+        "qongiroq", "qongirog", "qungiroq", "kongiroq", "qongroq", "qongiroqni",
+        "позвони", "звони", "набери", "call", "dial", "phone"
+    )
+    private val callVerbs = setOf(
+        "qil", "qilib", "qilgin", "qiling", "qilsang", "et", "ber", "bering", "qoy", "qoying",
+        "kerak", "please", "pls"
+    )
+    private val filler = setOf(
+        "jarvis", "jarvisga", "telefonga", "telefon", "telefondagi", "kirib", "kontaktiga", "kontaktga",
+        "kontakti", "kontakt", "kontaktdagi", "raqamiga", "ga", "ni", "dagi", "ilovasiga", "ilovasi",
+        "menga", "iltimos", "hozir", "bir", "to", "the", "contact", "my", "me", "в", "контакт", "контакту"
+    )
+
+    private fun clean(raw: String): String =
+        raw.lowercase(java.util.Locale.ROOT)
+            .replace(Regex("[\\u2018\\u2019\\u02BB\\u02BC`'\u00B4]"), "")
+            .replace(Regex("[^\\p{L}\\p{N}+ ]"), " ")
+            .replace(Regex("\\s+"), " ").trim()
+
+    /** "Ayam kontaktiga qo'ng'iroq qil" kabi buyruqdan kontakt nomini ajratadi. Buyruq bo'lmasa null. */
+    fun parseCall(raw: String): String? {
+        val words = clean(raw).split(' ').filter { it.isNotEmpty() }
+        if (words.none { it in callWords }) return null
+        val name = words.filter { it !in callWords && it !in callVerbs && it !in filler }
+            .joinToString(" ").trim()
+        return name.ifEmpty { null }
+    }
+
+    /** Internetsiz, tezkor yo'l: "Telegramni och", "Ayamga qo'ng'iroq qil". Buyruq bo'lmasa null. */
     fun fastPath(ctx: Context, text: String): Outcome? {
+        parseCall(text)?.let { target ->
+            val digits = target.replace(" ", "")
+            val isNumber = digits.length >= 3 && digits.all { it.isDigit() || it == '+' }
+            val r = if (isNumber) Actions.call(ctx, null, digits) else Actions.call(ctx, target, null)
+            return Outcome(r, close = true)
+        }
         val appName = AppLauncher.parseOpenCommand(text) ?: return null
         val opened = AppLauncher.open(ctx, appName)
         return if (opened != null) Outcome("$opened ochilmoqda", close = true)

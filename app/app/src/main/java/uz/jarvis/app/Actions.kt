@@ -34,13 +34,18 @@ object Actions {
     }
 
     fun call(ctx: Context, contact: String?, number: String?): String {
+        if (number.isNullOrBlank() && !has(ctx, Manifest.permission.READ_CONTACTS))
+            return "Kontaktlarga ruxsat berilmagan. Jarvis ilovasi → ⚙ → Kontaktlar."
         val (name, num) = resolve(ctx, contact, number)
-            ?: return if (!has(ctx, Manifest.permission.READ_CONTACTS))
-                "Kontaktlarga ruxsat kerak."
-            else "\"${contact ?: ""}\" nomli kontakt topilmadi."
-        val action = if (has(ctx, Manifest.permission.CALL_PHONE)) Intent.ACTION_CALL else Intent.ACTION_DIAL
+            ?: return "\"${contact ?: ""}\" nomli kontakt topilmadi."
+        val canCall = has(ctx, Manifest.permission.CALL_PHONE)
+        val action = if (canCall) Intent.ACTION_CALL else Intent.ACTION_DIAL
         val ok = start(ctx, Intent(action, Uri.fromParts("tel", num, null)))
-        return if (ok) "$name ga qo'ng'iroq qilinmoqda" else "Qo'ng'iroq qilib bo'lmadi."
+        return when {
+            !ok -> "Qo'ng'iroq qilib bo'lmadi."
+            canCall -> "$name ga qo'ng'iroq qilinmoqda"
+            else -> "$name raqami terildi. Qo'ng'iroq ruxsati yo'q, yashil tugmani bosing."
+        }
     }
 
     fun sms(ctx: Context, contact: String?, number: String?, message: String): String {

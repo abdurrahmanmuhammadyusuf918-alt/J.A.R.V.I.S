@@ -36,7 +36,7 @@ Maydonlar:
   "agent"     — yuqoridagilarga to'g'ri kelmaydigan, lekin telefonda bajarsa bo'ladigan boshqa ish (sozlamalarni o'zgartirish, ilova ichida biror narsa qilish). "goal" ga to'liq tavsif yoz.
 - "say": bajarishdan oldin ovozda aytiladigan juda qisqa tasdiq (foydalanuvchi tilida), masalan "Shahzodaga qo'ng'iroq qilyapman". "chat" uchun kerak emas.
 
-Qoidalar: "Jarvis" so'zini e'tiborsiz qoldir. Ism lotin harfida, foydalanuvchi aytganidek yoz. Faqat JSON.`;
+Qoidalar: Qo'ng'iroq qilish so'ralsa (masalan "telefonga kirib Ayam kontaktiga qo'ng'iroq qil", "Ayamga qo'ng'iroq qil", "call mom") har doim "call" ishlat, "app_task" emas; "contact" ga faqat ismni yoz. "SMS yoz"/"xabar yoz" ilova nomisiz bo'lsa "sms". "Jarvis" so'zini e'tiborsiz qoldir. Ism lotin harfida, foydalanuvchi aytganidek yoz. Faqat JSON.`;
 
 const AGENT_PROMPT = `Sen Android telefonni boshqaruvchi agentsan. Maqsadga erishish uchun ekrandagi elementlar ustida BITTA qadam tanla.
 
