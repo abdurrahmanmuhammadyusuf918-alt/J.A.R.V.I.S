@@ -660,7 +660,7 @@ private fun ChatRow(chat: Chat, selected: Boolean, onClick: () -> Unit, onDelete
             IconBtn(Icons.Filled.MoreVert, "Ko'proq", size = 40.dp, tint = JarvisColors.TextDim) { menu = true }
             DropdownMenu(
                 expanded = menu, onDismissRequest = { menu = false },
-                containerColor = JarvisColors.Card,
+                modifier = Modifier.background(JarvisColors.Card),
             ) {
                 DropdownMenuItem(
                     text = { Text("O'chirish", color = JarvisColors.Error) },
