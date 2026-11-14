@@ -4,7 +4,7 @@ import rateLimit from "express-rate-limit";
 
 const {
   GEMINI_API_KEY,
-  GEMINI_MODEL = "gemini-2.0-flash",
+  GEMINI_MODEL = "gemini-3.6-flash",
   APP_KEY = "",
   PORT = 3000,
 } = process.env;
@@ -104,7 +104,26 @@ app.use("/command", limiter(30));
 app.use("/agent", limiter(90));
 app.use("/weather", limiter(20));
 
-app.get("/health", (_req, res) => res.json({ ok: true }));
+app.get("/health", (_req, res) => res.json({ ok: true, model: MODELS[preferred] }));
+
+// Diagnostika: har bir modelni qisqa so'rov bilan tekshiradi (brauzerda oching: /diag)
+app.get("/diag", async (req, res) => {
+  if (!authorized(req, res)) return;
+  const out = [];
+  for (const model of MODELS) {
+    try {
+      const t = await geminiOnce(model, {
+        system: "Qisqa javob ber.",
+        contents: [{ role: "user", parts: [{ text: "Salom deb javob ber" }] }],
+        maxOutputTokens: 20,
+      });
+      out.push({ model, ok: true, sample: t.slice(0, 40) });
+    } catch (e) {
+      out.push({ model, ok: false, status: e.geminiStatus ?? null, error: String(e.message).slice(0, 200) });
+    }
+  }
+  res.json({ active: MODELS[preferred], results: out });
+});
 
 function authorized(req, res) {
   if (APP_KEY && req.get("x-app-key") !== APP_KEY) {
@@ -114,8 +133,13 @@ function authorized(req, res) {
   return true;
 }
 
-async function gemini({ system, contents, json = false, maxOutputTokens = 2048, temperature = 0.7, tools }) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+// Model nomlari vaqt o'tib o'chirib turiladi (gemini-2.0-flash 2026-06-01 da o'chgan).
+// Shuning uchun birinchi model ishlamasa, keyingisiga o'tamiz va ishlaganini eslab qolamiz.
+const MODELS = [...new Set([GEMINI_MODEL, "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"])];
+let preferred = 0;
+
+async function geminiOnce(model, { system, contents, json = false, maxOutputTokens = 2048, temperature = 0.7, tools }) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const generationConfig = { temperature, maxOutputTokens };
   if (json) generationConfig.responseMimeType = "application/json";
   const r = await fetch(url, {
@@ -128,16 +152,46 @@ async function gemini({ system, contents, json = false, maxOutputTokens = 2048, 
       ...(tools ? { tools } : {}),
     }),
   });
-  const data = await r.json();
+  let data = {};
+  try {
+    data = await r.json();
+  } catch {}
   if (!r.ok) {
-    console.error("Gemini xatosi:", r.status, JSON.stringify(data));
-    const err = new Error(
-      r.status === 429 ? "Bepul limit tugadi, birozdan keyin urinib ko'ring." : "AI xizmatida xatolik."
-    );
-    err.status = 502;
+    const err = new Error(data?.error?.message || `HTTP ${r.status}`);
+    err.geminiStatus = r.status;
+    err.model = model;
     throw err;
   }
   return (data.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("").trim();
+}
+
+function friendlyError(e) {
+  const st = e.geminiStatus;
+  let msg;
+  if (st === 429) msg = "Bepul limit tugadi, birozdan keyin urinib ko'ring.";
+  else if (st === 404) msg = "AI modeli topilmadi (404). Server sozlamasini yangilash kerak.";
+  else if (st === 401 || st === 403) msg = `API kalit yaroqsiz yoki ruxsat yo'q (${st}).`;
+  else if (st === 503 || st === 500) msg = `AI xizmati band (${st}), birozdan keyin urinib ko'ring.`;
+  else msg = `AI xizmatida xatolik${st ? ` (${st})` : ""}.`;
+  const err = new Error(msg);
+  err.status = 502;
+  return err;
+}
+
+async function gemini(opts) {
+  let last;
+  for (let k = 0; k < MODELS.length; k++) {
+    const idx = (preferred + k) % MODELS.length;
+    try {
+      const out = await geminiOnce(MODELS[idx], opts);
+      preferred = idx;
+      return out;
+    } catch (e) {
+      last = e;
+      console.error(`Gemini xatosi [${e.model ?? MODELS[idx]}]:`, e.geminiStatus ?? "", e.message);
+    }
+  }
+  throw friendlyError(last ?? new Error("noma'lum"));
 }
 
 function parseJson(raw) {
