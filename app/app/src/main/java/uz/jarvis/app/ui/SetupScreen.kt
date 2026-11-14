@@ -75,6 +75,7 @@ fun SetupScreen(onDone: () -> Unit) {
 
     val runtime = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { tick++ }
     val settings = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { tick++ }
+    val runtimeMulti = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { tick++ }
 
     fun open(i: Intent) {
         try { settings.launch(i) } catch (e: Exception) {
@@ -94,6 +95,13 @@ fun SetupScreen(onDone: () -> Unit) {
         rt("contacts", "Kontaktlar", "Ism bo'yicha kontaktni topish uchun", Manifest.permission.READ_CONTACTS)
         rt("call", "Qo'ng'iroq", "Qo'ng'iroq qilish uchun", Manifest.permission.CALL_PHONE)
         rt("sms", "SMS", "SMS yuborish uchun", Manifest.permission.SEND_SMS)
+        add(Step(
+            "calendar", "Kalendar", "Eslatma va voqea qo'shish, rejalaringizni o'qish uchun",
+            Perms.granted(ctx, Manifest.permission.READ_CALENDAR) && Perms.granted(ctx, Manifest.permission.WRITE_CALENDAR),
+        ) { runtimeMulti.launch(arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)) })
+        rt("location", "Joylashuv", "Shahar aytmasangiz ham ob-havoni aytib berish uchun", Manifest.permission.ACCESS_COARSE_LOCATION)
+        add(Step("write", "Tizim sozlamalarini o'zgartirish", "Ekran yorqinligini ovoz bilan boshqarish uchun",
+            Perms.writeSettings(ctx)) { open(Perms.writeSettingsIntent(ctx)) })
         add(Step("overlay", "Boshqa ilovalar ustida ko'rsatish", "Panel istalgan ekran ustida chiqishi uchun",
             Perms.overlay(ctx)) { open(Perms.overlayIntent(ctx)) })
         add(Step("access", "Maxsus imkoniyatlar", "Boshqa ilovalar ichida bosish va yozish uchun (Plus, YouTube...). Ro'yxatdan Jarvis'ni toping va yoqing",

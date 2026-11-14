@@ -149,13 +149,16 @@ class JarvisViewModel(app: Application) : AndroidViewModel(app) {
         _loading.value = true
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
-                JarvisApi().command(text, history).map { CommandRouter.execute(getApplication(), it) }
+                JarvisApi().command(text, history).map { CommandRouter.execute(getApplication(), it, text) }
             }
             _loading.value = false
             result
                 .onSuccess { out ->
                     reply(chatId, out.message, fromVoice || (out.speak && out.agentGoal != null))
                     out.agentGoal?.let { AgentRunner.run(getApplication(), it) }
+                    out.afterClose?.let { run ->
+                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ run() }, 900)
+                    }
                 }
                 .onFailure { add(chatId, Msg(text = it.message ?: "Noma'lum xato", fromUser = false, isError = true)) }
         }

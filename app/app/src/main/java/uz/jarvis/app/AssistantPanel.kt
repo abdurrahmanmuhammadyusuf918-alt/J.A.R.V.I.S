@@ -175,7 +175,7 @@ class AssistantPanel(private val ctx: Context, private val onClose: () -> Unit) 
         }
     }
 
-    private fun showReply(text: String, speak: Boolean) {
+    private fun showReply(text: String, speak: Boolean, onSpoken: (() -> Unit)? = null) {
         thinking = false
         status.text = "Jarvis"
         status.setTextColor(cDim)
@@ -184,7 +184,7 @@ class AssistantPanel(private val ctx: Context, private val onClose: () -> Unit) 
         replyText.visibility = View.VISIBLE
         scroll.visibility = View.VISIBLE
         scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
-        if (speak) voice?.speak(text)
+        if (speak) voice?.speak(text, onSpoken?.let { cb -> { main.post(cb) } })
     }
 
     private fun handleText(text: String) {
@@ -205,7 +205,7 @@ class AssistantPanel(private val ctx: Context, private val onClose: () -> Unit) 
         history.add("user" to text)
         val snapshot = history.toList()
         exec?.execute {
-            val result = api.command(text, snapshot).map { CommandRouter.execute(appCtx, it) }
+            val result = api.command(text, snapshot).map { CommandRouter.execute(appCtx, it, text) }
             main.post {
                 if (!active) return@post
                 result
@@ -222,12 +222,23 @@ class AssistantPanel(private val ctx: Context, private val onClose: () -> Unit) 
     }
 
     private fun finish(out: CommandRouter.Outcome) {
-        showReply(out.message, out.speak)
         val goal = out.agentGoal
+        val after = out.afterClose
+        if (out.followUp) {
+            // Jarvis savol berdi: gapirib bo'lgach javobingizni darhol tinglaydi
+            showReply(out.message, out.speak) { if (active) voice?.startListening() }
+            scheduleAutoClose(30000)
+            return
+        }
+        showReply(out.message, out.speak)
         when {
             goal != null -> main.postDelayed({
                 onClose()
                 AgentRunner.run(appCtx, goal)
+            }, 900)
+            after != null -> main.postDelayed({
+                onClose()
+                main.postDelayed({ after() }, 500)
             }, 900)
             out.close -> scheduleAutoClose(1600)
             else -> scheduleAutoClose(15000)

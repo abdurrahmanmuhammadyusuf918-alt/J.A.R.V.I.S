@@ -125,6 +125,22 @@ class JarvisAccessibilityService : AccessibilityService() {
         return target.performAction(action)
     }
 
+    /** Tizim amallari: skrinshot, qulflash, orqaga, bosh ekran, so'nggi ilovalar, bildirishnomalar... */
+    fun globalAction(name: String): Boolean {
+        val a = when (name) {
+            "home" -> GLOBAL_ACTION_HOME
+            "back" -> GLOBAL_ACTION_BACK
+            "recents" -> GLOBAL_ACTION_RECENTS
+            "notifications" -> GLOBAL_ACTION_NOTIFICATIONS
+            "quick_settings" -> GLOBAL_ACTION_QUICK_SETTINGS
+            "power" -> GLOBAL_ACTION_POWER_DIALOG
+            "lock" -> if (android.os.Build.VERSION.SDK_INT >= 28) GLOBAL_ACTION_LOCK_SCREEN else return false
+            "screenshot" -> if (android.os.Build.VERSION.SDK_INT >= 28) GLOBAL_ACTION_TAKE_SCREENSHOT else return false
+            else -> return false
+        }
+        return performGlobalAction(a)
+    }
+
     private fun tap(x: Float, y: Float): Boolean {
         val path = Path().apply { moveTo(x, y) }
         val gesture = GestureDescription.Builder()

@@ -100,7 +100,7 @@ class VoiceController(
         onListening(false)
     }
 
-    fun speak(text: String) = Speaker.speak(context, text)
+    fun speak(text: String, onDone: (() -> Unit)? = null) = Speaker.speak(context, text, onDone)
 
     fun destroy() {
         unmute()

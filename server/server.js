@@ -19,31 +19,62 @@ const SYSTEM_PROMPT =
   "Foydalanuvchi qaysi tilda yozsa, shu tilda (o'zbek, rus, ingliz) javob ber. " +
   "Javoblaring aniq, qisqa va foydali bo'lsin. Kod so'rasa, to'liq va ishlaydigan kod ber.";
 
-const COMMAND_PROMPT = `Sen Jarvis — Android telefondagi ovozli yordamchisan. Foydalanuvchi gapirgan matnni (ovozdan tanilgan, imlo xatosi bo'lishi mumkin; o'zbek, rus yoki ingliz tilida) tahlil qilib, FAQAT bitta JSON obyekt qaytar. Boshqa matn yozma.
+const commandPrompt = (now) => `Sen Jarvis — Android telefondagi ovozli yordamchisan (Siri kabi aqlli). Hozirgi vaqt: ${now}.
+Foydalanuvchi gapirgan matnni (ovozdan tanilgan, imlo xatosi bo'lishi mumkin; o'zbek, rus yoki ingliz tilida) tahlil qilib, FAQAT bitta JSON obyekt qaytar. Boshqa matn yozma.
 
-Maydonlar:
-- "action": quyidagilardan biri:
-  "chat"      — oddiy savol/suhbat. "reply" ga javobni yoz (qisqa, foydalanuvchi tilida; ovozda o'qiladi, shuning uchun markdown ishlatma).
-  "call"      — qo'ng'iroq qilish. "contact" (ism) yoki "number" (raqam).
-  "sms"       — oddiy SMS yuborish. "contact" yoki "number", "message" (yuboriladigan matn). Foydalanuvchi ilova nomini aytmagan bo'lsa shuni ishlat.
-  "open_app"  — ilovani ochish. "app" (ilova nomi).
-  "app_task"  — aniq bir ilova ichida ish qilish (masalan Telegram/Plus/WhatsApp'da kimgadir xabar yozish). "app" (ilova nomi) va "goal" (bajariladigan ishning to'liq, aniq tavsifi; masalan: "Shahzoda ismli kontaktga kirib 'salom' deb yoz va yubor").
-  "youtube"   — YouTube'da qidirish/ijro. "query", "play" (true bo'lsa birinchi videoni ochib ijro etadi).
-  "alarm"     — budilnik. "hour" (0-23), "minute" (0-59), "label".
-  "timer"     — taymer. "seconds", "label".
-  "flashlight"— fonar. "on" (true/false).
-  "navigate"  — xaritada yo'l/joy. "query".
-  "agent"     — yuqoridagilarga to'g'ri kelmaydigan, lekin telefonda bajarsa bo'ladigan boshqa ish (sozlamalarni o'zgartirish, ilova ichida biror narsa qilish). "goal" ga to'liq tavsif yoz.
-- "say": bajarishdan oldin ovozda aytiladigan juda qisqa tasdiq (foydalanuvchi tilida), masalan "Shahzodaga qo'ng'iroq qilyapman". "chat" uchun kerak emas.
+Umumiy maydonlar: "action" va "say" — bajarishdan oldin ovozda aytiladigan juda qisqa tasdiq (foydalanuvchi tilida), masalan "Shahzodaga qo'ng'iroq qilyapman". "chat" uchun "say" kerak emas.
 
-Qoidalar: Qo'ng'iroq qilish so'ralsa (masalan "telefonga kirib Ayam kontaktiga qo'ng'iroq qil", "Ayamga qo'ng'iroq qil", "call mom") har doim "call" ishlat, "app_task" emas; "contact" ga faqat ismni yoz. "SMS yoz"/"xabar yoz" ilova nomisiz bo'lsa "sms". "Jarvis" so'zini e'tiborsiz qoldir. Ism lotin harfida, foydalanuvchi aytganidek yoz. Faqat JSON.`;
+"action" qiymatlari va ularning maydonlari:
+Muloqot:
+- "chat": oddiy savol, suhbat, tarjima, hisob-kitob, ta'rif, maslahat, hazil, umumiy bilim. "reply" ga javobni yoz (qisqa, foydalanuvchi tilida; ovozda o'qiladi, shuning uchun markdown, emoji, ro'yxat belgilarisiz). Foydalanuvchidan biror narsani aniqlashtirishing kerak bo'lsa, savolni "reply" ga yozib "followup": true qo'y.
+- "web": internetdan YANGI yoki o'zgaruvchan ma'lumot kerak (yangiliklar, sport natijalari, valyuta kursi, narxlar, bugungi voqealar, hozirgi lavozimdagi shaxs, film/konsert vaqtlari). "query" ga qidiruv matni.
+- "weather": ob-havo savoli. "city" — shahar aytilgan bo'lsa (ingliz yoki asl yozuvida), aytilmagan bo'lsa bo'sh qoldir.
+Aloqa:
+- "call": qo'ng'iroq. "contact" (faqat ism) yoki "number".
+- "sms": oddiy SMS. "contact" yoki "number", "message" (yuboriladigan matn). Ilova nomi aytilmagan bo'lsa shuni ishlat.
+- "email": xat yozish. "to" (email manzil yoki kontakt ismi), "subject", "body".
+- "app_task": aniq bir ilova ichida ish (Telegram, Plus, WhatsApp'da kimgadir xabar yozish va hokazo). "app" va "goal" (ishning to'liq, aniq tavsifi; masalan: "Shahzoda ismli kontaktga kirib 'salom' deb yoz va yubor").
+Ilovalar va media:
+- "open_app": ilovani ochish. "app".
+- "youtube": YouTube'da qidirish/ijro. "query", "play" (true bo'lsa birinchi videoni ijro etadi).
+- "music": qo'shiq/ijrochi/albom qo'yish. "query", "app" (aytilgan bo'lsa: "spotify" yoki "youtube music").
+- "media": hozir ijro bo'layotgan narsani boshqarish. "key": "play" | "pause" | "next" | "previous" | "stop".
+- "open_url": saytni ochish. "url".
+- "navigate": xaritada joy/yo'nalish. "query".
+Vaqt va reja:
+- "alarm": budilnik. "hour" (0-23), "minute" (0-59), "label".
+- "timer": taymer. "seconds", "label".
+- "calendar_add": kalendarga voqea yoki ESLATMA ("eslatib qo'y", "remind me", "uchrashuv qo'sh"). "title", "start" ("yyyy-MM-ddTHH:mm", mahalliy vaqt; "ertaga", "juma kuni" kabilarni hozirgi vaqtga nisbatan hisobla), "end" (ixtiyoriy).
+- "calendar_read": reja/jadval so'rash ("bugun nima rejam bor"). "from" va "to" ("yyyy-MM-ddTHH:mm"; bir kun uchun 00:00 dan 23:59 gacha).
+- "info": "kind": "time" (soat nechchi) | "date" (bugun nechanchi, qaysi kun) | "battery" (batareya).
+Telefon boshqaruvi:
+- "flashlight": fonar. "on" (true/false).
+- "volume": ovoz balandligi. "mode": "up" | "down" | "set" | "mute" | "unmute" | "max"; "level" (0-100, faqat "set" uchun); "stream": "music" (standart) yoki "ring" (qo'ng'iroq ovozi).
+- "brightness": ekran yorqinligi. "mode": "up" | "down" | "set" | "max" | "min"; "level" (0-100).
+- "camera": "mode": "photo" | "selfie" | "video".
+- "settings": sozlama sahifasini ochish. "target": "wifi" | "bluetooth" | "airplane" | "hotspot" | "location" | "dnd" | "display" | "battery" | "nfc" | "sound" | "data" | "storage" | "apps" | "accessibility" | "date" | "language" | "security" | "about" | "main". Yoqish/o'chirish so'ralgan bo'lsa "on": true yoki false qo'sh (Wi-Fi'ni yoq, Bluetooth'ni o'chir va hokazo).
+- "global": tizim amali. "name": "screenshot" | "lock" | "home" | "back" | "recents" | "notifications" | "quick_settings" | "power".
+- "random": "kind": "coin" (tanga) | "dice" (kubik) | "number" (son, "min" va "max" bilan).
+- "agent": yuqoridagilarga to'g'ri kelmaydigan, lekin telefonda bajarsa bo'ladigan boshqa ish. "goal" ga to'liq tavsif yoz.
+
+Qoidalar:
+- Qo'ng'iroq so'ralsa ("telefonga kirib Ayam kontaktiga qo'ng'iroq qil", "Ayamga qo'ng'iroq qil", "call mom") har doim "call" ishlat, "app_task" emas; "contact" ga faqat ismni yoz.
+- Ilova nomisiz "SMS yoz" / "xabar yoz" bo'lsa "sms".
+- Ob-havo — "weather", yangi ma'lumot — "web", oddiy bilim savoli — "chat".
+- Vaqtni so'rasa "info" ishlat, o'zing taxmin qilma.
+- "Jarvis" so'zini e'tiborsiz qoldir. Ism lotin harfida, foydalanuvchi aytganidek yoz.
+- Faqat JSON.`;
+
+const WEB_PROMPT = (now) => `Sen Jarvis — ovozli yordamchisan. Hozirgi vaqt: ${now}. Internet qidiruvidan topilgan yangi ma'lumotga tayanib, savolga qisqa (2-4 gap), aniq javob ber. Javob ovozda o'qiladi: markdown, emoji, ro'yxat belgilari va uzun havolalar ishlatma. Foydalanuvchi qaysi tilda so'ragan bo'lsa, shu tilda javob ber. Ishonchsiz bo'lsang, shuni ayt.`;
+
+const WEATHER_PROMPT = `Sen Jarvis — ovozli yordamchisan. Quyida Open-Meteo'dan olingan ob-havo ma'lumoti berilgan (weather_code — WMO kodlari: 0 ochiq, 1-3 qisman bulutli/bulutli, 45-48 tuman, 51-57 yengil yomg'ir/shivalash, 61-67 yomg'ir, 71-77 qor, 80-82 jala, 95-99 momaqaldiroq). Foydalanuvchining savoliga (bugun, ertaga yoki bir necha kun) qisqa (2-3 gap), tabiiy javob ber: harorat (°C), osmon holati, yog'ingarchilik ehtimoli, kerak bo'lsa maslahat (soyabon, issiq kiyim). Javob ovozda o'qiladi: markdown, emoji, ro'yxatsiz. Foydalanuvchi tilida javob ber.`;
 
 const AGENT_PROMPT = `Sen Android telefonni boshqaruvchi agentsan. Maqsadga erishish uchun ekrandagi elementlar ustida BITTA qadam tanla.
 
 Ekran elementlari "[id] tur: matn" ko'rinishida beriladi. Bayroqlar: click=bosiladi, edit=matn kiritiladi, scroll=aylantiriladi, focused=fokusda.
 
 FAQAT bitta JSON obyekt qaytar:
-{"action": "click"|"type"|"scroll"|"back"|"home"|"open_app"|"wait"|"done"|"fail", "id": <element id>, "text": "<kiritiladigan matn>", "direction": "down"|"up", "say": "<done/fail bo'lganda foydalanuvchiga qisqa xabar>"}
+{"action": "click"|"type"|"scroll"|"back"|"home"|"notifications"|"quick_settings"|"recents"|"screenshot"|"lock"|"open_app"|"wait"|"done"|"fail", "id": <element id>, "text": "<kiritiladigan matn>", "direction": "down"|"up", "say": "<done/fail bo'lganda foydalanuvchiga qisqa xabar>"}
 
 Qoidalar:
 - "open_app" uchun "text" ga ilova nomini yoz (masalan "Telegram", "Sozlamalar").
@@ -71,6 +102,7 @@ const limiter = (limit) =>
 app.use("/chat", limiter(20));
 app.use("/command", limiter(30));
 app.use("/agent", limiter(90));
+app.use("/weather", limiter(20));
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
@@ -82,7 +114,7 @@ function authorized(req, res) {
   return true;
 }
 
-async function gemini({ system, contents, json = false, maxOutputTokens = 2048, temperature = 0.7 }) {
+async function gemini({ system, contents, json = false, maxOutputTokens = 2048, temperature = 0.7, tools }) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
   const generationConfig = { temperature, maxOutputTokens };
   if (json) generationConfig.responseMimeType = "application/json";
@@ -93,6 +125,7 @@ async function gemini({ system, contents, json = false, maxOutputTokens = 2048, 
       systemInstruction: { parts: [{ text: system }] },
       contents,
       generationConfig,
+      ...(tools ? { tools } : {}),
     }),
   });
   const data = await r.json();
@@ -151,13 +184,14 @@ app.post("/chat", async (req, res) => {
   }
 });
 
-// Ovozli buyruqni amalga aylantiradi: { text, history? } -> { action, ... }
+// Ovozli buyruqni amalga aylantiradi: { text, history?, now? } -> { action, ... }
 app.post("/command", async (req, res) => {
   if (!authorized(req, res)) return;
-  const { text, history } = req.body ?? {};
+  const { text, history, now } = req.body ?? {};
   if (typeof text !== "string" || !text.trim()) {
     return res.status(400).json({ error: "text kerak." });
   }
+  const nowStr = typeof now === "string" && now ? now.slice(0, 80) : new Date().toISOString();
   const contents = Array.isArray(history) ? toContents(history) : [];
   // history oxirgi xabar sifatida text ni ham o'z ichiga olmasa, qo'shamiz
   if (contents.length === 0 || contents[contents.length - 1].role !== "user") {
@@ -165,7 +199,7 @@ app.post("/command", async (req, res) => {
   }
   try {
     const raw = await gemini({
-      system: COMMAND_PROMPT,
+      system: commandPrompt(nowStr),
       contents,
       json: true,
       maxOutputTokens: 1024,
@@ -175,7 +209,88 @@ app.post("/command", async (req, res) => {
     if (!obj || typeof obj.action !== "string") {
       return res.json({ action: "chat", reply: raw || "Tushunmadim, qayta ayting." });
     }
+
+    // Internetdan yangi ma'lumot kerak: Google Search bilan javob beramiz
+    if (obj.action === "web") {
+      const q = String(obj.query || text).slice(0, 500);
+      const prompt = `Foydalanuvchi savoli: ${text.slice(0, 1000)}\nQidiruv: ${q}`;
+      let reply = "";
+      try {
+        reply = await gemini({
+          system: WEB_PROMPT(nowStr),
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          tools: [{ google_search: {} }],
+          maxOutputTokens: 700,
+          temperature: 0.3,
+        });
+      } catch (e) {
+        console.error("Qidiruv bilan javob xatosi:", e.message);
+      }
+      if (!reply) {
+        try {
+          reply = await gemini({
+            system: WEB_PROMPT(nowStr) + " Internet mavjud emas; bilganingcha javob ber va ma'lumot eskirgan bo'lishi mumkinligini ayt.",
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            maxOutputTokens: 500,
+            temperature: 0.3,
+          });
+        } catch (e) {
+          console.error(e.message);
+        }
+      }
+      return res.json({ action: "chat", reply: reply || "Ma'lumot topa olmadim, birozdan keyin urinib ko'ring." });
+    }
+
     res.json(obj);
+  } catch (e) {
+    console.error(e);
+    res.status(e.status ?? 500).json({ error: e.message || "Server xatosi." });
+  }
+});
+
+// Ob-havo: { city?, lat?, lon?, question, now } -> { reply }
+app.post("/weather", async (req, res) => {
+  if (!authorized(req, res)) return;
+  const { city, lat, lon, question, now } = req.body ?? {};
+  try {
+    let latitude = Number(lat);
+    let longitude = Number(lon);
+    let place = "";
+    if (typeof city === "string" && city.trim()) {
+      const gr = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city.trim().slice(0, 100))}&count=1&language=en&format=json`
+      );
+      const g = await gr.json();
+      const first = g?.results?.[0];
+      if (!first) return res.json({ reply: `"${city.trim()}" nomli shahar topilmadi.` });
+      latitude = first.latitude;
+      longitude = first.longitude;
+      place = first.name + (first.country ? ", " + first.country : "");
+    } else if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || (lat == null && lon == null)) {
+      return res.status(400).json({ error: "city yoki lat/lon kerak." });
+    }
+
+    const url =
+      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
+      `&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m` +
+      `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
+      `&forecast_days=4&timezone=auto`;
+    const wr = await fetch(url);
+    if (!wr.ok) return res.status(502).json({ error: "Ob-havo xizmati javob bermadi." });
+    const w = await wr.json();
+
+    const data = JSON.stringify({ place: place || "foydalanuvchi turgan joy", current: w.current, daily: w.daily });
+    const prompt =
+      `Savol: ${String(question || "Ob-havo qanday?").slice(0, 500)}\n` +
+      `Hozirgi vaqt: ${String(now || "").slice(0, 80)}\n` +
+      `Ob-havo ma'lumoti: ${data}`;
+    const reply = await gemini({
+      system: WEATHER_PROMPT,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      maxOutputTokens: 400,
+      temperature: 0.3,
+    });
+    res.json({ reply: reply || "Ob-havoni aniqlay olmadim." });
   } catch (e) {
     console.error(e);
     res.status(e.status ?? 500).json({ error: e.message || "Server xatosi." });

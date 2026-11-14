@@ -6,6 +6,10 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 
 class JarvisApi {
@@ -47,8 +51,21 @@ class JarvisApi {
 
     /** Ovozli buyruqni amalga aylantiradi (call, sms, open_app, agent, chat ...). */
     fun command(text: String, history: List<Pair<String, String>>): Result<JSONObject> = runCatching {
-        post("/command", JSONObject().put("text", text).put("history", messages(history)))
+        post(
+            "/command",
+            JSONObject().put("text", text).put("history", messages(history)).put("now", nowString())
+        )
     }
+
+    /** Ob-havo: shahar nomi yoki koordinata bo'yicha qisqa javob. */
+    fun weather(city: String, lat: Double?, lon: Double?, question: String): Result<String> = runCatching {
+        val body = JSONObject().put("city", city).put("question", question).put("now", nowString())
+        if (lat != null && lon != null) body.put("lat", lat).put("lon", lon)
+        post("/weather", body).optString("reply").ifEmpty { null } ?: error("Bo'sh javob")
+    }
+
+    private fun nowString(): String =
+        SimpleDateFormat("yyyy-MM-dd EEEE HH:mm", Locale.US).format(Date()) + " (" + TimeZone.getDefault().id + ")"
 
     /** Agent uchun keyingi qadamni so'raydi. */
     fun agent(goal: String, screen: String, steps: List<String>, pkg: String): Result<JSONObject> = runCatching {

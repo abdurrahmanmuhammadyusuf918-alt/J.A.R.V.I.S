@@ -89,6 +89,10 @@ object AgentRunner {
                     svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
                     "$step) home"
                 }
+                "notifications", "quick_settings", "recents", "screenshot", "lock" -> {
+                    val ok = svc.globalAction(action)
+                    "$step) $action -> ${if (ok) "ok" else "xato"}"
+                }
                 "open_app" -> {
                     val name = obj.optString("text")
                     val opened = AppLauncher.open(app, name)

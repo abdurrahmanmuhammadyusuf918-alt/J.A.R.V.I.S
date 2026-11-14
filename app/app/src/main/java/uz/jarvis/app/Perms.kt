@@ -19,6 +19,11 @@ object Perms {
 
     fun overlay(ctx: Context) = Settings.canDrawOverlays(ctx)
 
+    fun writeSettings(ctx: Context) = Settings.System.canWrite(ctx)
+
+    fun writeSettingsIntent(ctx: Context) =
+        Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:${ctx.packageName}"))
+
     fun accessibility(ctx: Context): Boolean {
         val me = ComponentName(ctx, JarvisAccessibilityService::class.java)
         val enabled = Settings.Secure.getString(

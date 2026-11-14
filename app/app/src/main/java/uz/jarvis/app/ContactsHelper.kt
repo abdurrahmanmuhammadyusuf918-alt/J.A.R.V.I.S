@@ -90,4 +90,37 @@ object ContactsHelper {
         }
         return best
     }
+
+    /** Kontaktning email manzilini ism bo'yicha topadi. */
+    fun findEmail(ctx: Context, query: String): String? {
+        if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.READ_CONTACTS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) return null
+        val q = key(query)
+        if (q.isEmpty()) return null
+        val projection = arrayOf(
+            ContactsContract.CommonDataKinds.Email.DISPLAY_NAME,
+            ContactsContract.CommonDataKinds.Email.ADDRESS,
+        )
+        var best: String? = null
+        var bestScore = 0
+        ctx.contentResolver.query(
+            ContactsContract.CommonDataKinds.Email.CONTENT_URI, projection, null, null, null
+        )?.use { c ->
+            while (c.moveToNext()) {
+                val name = c.getString(0) ?: continue
+                val addr = c.getString(1) ?: continue
+                val k = key(name)
+                val score = when {
+                    k.isEmpty() -> 0
+                    k == q -> 3
+                    k.startsWith(q) || q.startsWith(k) -> 2
+                    k.contains(q) || q.contains(k) -> 1
+                    else -> 0
+                }
+                if (score > bestScore) { bestScore = score; best = addr }
+            }
+        }
+        return best
+    }
 }
